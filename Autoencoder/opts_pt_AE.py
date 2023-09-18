@@ -9,27 +9,16 @@ def parse_opts():
         type=str,
         help='Dataset')
     parser.add_argument(
-        '--result_path_win',
-        default='Z:\\Jiapan\\Radiotherapy\\HNSCC\\Results\\results',
-        type=str,
-        help='Result directory path')
-    parser.add_argument(
-        '--result_path_linux',
+        '--result_path',
         default='/data/pg-dl_radioth/scripts/Autoencoder_opcradiomics/results',
         type=str,
         help='Result directory path')
     parser.add_argument(
-        '--data_path_win',
-        default='Y:\\Jiapan\\PublicDatasets\\HNSCCdataset\\VolPatch_clinical',
-        type=str,
-        help='Data directory path')
-    parser.add_argument(
-        '--data_path_linux',
+        '--data_path',
         default='/data/pg-dl_radioth/scripts/MultilabelLearning_OPC_Radiomics/OPC-Radiomics/VolPatch_clinical',
         type=str,
         help='Data directory path')
-
-    parser.add_argument(
+    parser.add_argument( 
         '--save_stats', 
         action='store_false', 
         help='extract statistics (min, max) of each input file, and save them to csv')  # store_false = True
@@ -204,25 +193,15 @@ def parse_opts():
         help='save Tensor Board log')
     parser.add_argument(
         '--input_type',
-        default=0,
+        default=3,
         type=int,
-        help='Different types of inputs (0 for only CT, 1 for masking CT ,2 for CT and mask are in two channels,32 for 2 64x64x64 CT patches by GTV)')  #
+        help='Different types of inputs (0 for only CT, 1 for masking CT ,2 for CT and mask are in two channels,3 for 2 64x64x64 CT patches by GTV)')  #
     parser.add_argument(
         '--input_modality',
         default=0,
         type=int,
-        help='Different types of input modality (0 for only CT, 1 for only PET, 2 for CT and PET in two channels,3 for CT and PET combined in 50% pixels)')  #
-    parser.add_argument(
-        '--fold',
-        default=1,
-        type=int,
-        help='fold number')  #
-    parser.add_argument(
-        '--sub',
-        default=1,
-        type=int,
-        help='sub number 50 steps of 1000 steps of boostraping')  
-
+        help='Different types of input modality (0 for only CT)')  #
+    
     args = parser.parse_args()
 
     return args

@@ -16,3 +16,9 @@ python Crop3DPatches_ClinialCategory_OPCradiomics.py # save clinical and crop im
 #To train the autoencoder, use   python  PTmain_3DFeatureExtr.py"  --input_type 3  --input_modality 0  --result_path ...  --data_path ... 
 
 #To test the autoencoder, use   python  PTmain_3DFeatureExtr.py"  --input_type 3  --input_modality 0  --result_path ...  --data_path ... --no_train --no_val --test --resume_path save_80.pth
+
+# End-to-end learning
+
+The end-to-end learning code can be find in the https://github.com/baoqiangmaUMCG/TransRP, which is the official code of our previous study:
+
+"Ma, B., Guo, J., Van Dijk, L., van Ooijen, P. M., Both, S., & Sijtsema, N. M. (2023, April). TransRP: Transformer-based PET/CT feature extraction incorporating clinical data for recurrence-free survival prediction in oropharyngeal cancer. In Medical Imaging with Deep Learning."

@@ -1,5 +1,8 @@
 #This is the official code of paper "Comparison of CT image features extracted by radiomics, self-supervised learning and end-to-end deep learning for outcome prediction of oropharyngeal cancer.(2023, Physics and Imaging in Radiation Oncology, under review)"
 
+
+![pipline_SL_new](https://github.com/baoqiangmaUMCG/CTfeatures-Outcome-Prediction/assets/86932526/810b7703-36ca-472c-9254-444303ca645a)
+
 # Data preprocessing:
 cd Data_preprocessing
 

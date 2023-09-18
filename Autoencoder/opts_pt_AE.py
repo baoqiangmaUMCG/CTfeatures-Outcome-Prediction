@@ -28,12 +28,7 @@ def parse_opts():
         default='/data/pg-dl_radioth/scripts/MultilabelLearning_OPC_Radiomics/OPC-Radiomics/VolPatch_clinical',
         type=str,
         help='Data directory path')
-        
-    parser.add_argument(
-        '--data_test_path_linux',
-        default='/data/pg-umcg_mii/pfs_prediction/data_test/VolPatch_clinical',
-        type=str,
-        help='Test Data directory path')
+
     parser.add_argument(
         '--save_stats', 
         action='store_false', 

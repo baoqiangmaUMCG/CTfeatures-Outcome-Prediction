@@ -31,7 +31,6 @@ random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
 
-
 def main():
     opt = parse_opts()
     opt.arch = '{}-{}'.format(opt.model, opt.model_depth)
@@ -90,7 +89,7 @@ def main():
 
     # save model architecture
     file = open(opt.result_path + '/model.txt', 'a+')
-    file.write(str(txt_G))
+    file.write(str(txt))
     file.close()
     
     # save the config values 

@@ -476,102 +476,6 @@ class Res3DAutoencoder(nn.Module):
 
         return x, x_latent  #, x_feature_map
         
-        
-class Discriminator(nn.Module):
-    def __init__(self,
-                 block,
-                 layers,
-                 sample_size,
-                 sample_duration,
-                 extra_featuresize,
-                 actfn,
-                 shortcut_type='B',
-                 input_channel=1):
-        self.inplanes = 64
-        super(Discriminator, self).__init__()
-        self.conv1 = SeparableConv7x7x7(input_channel, self.inplanes)
-        self.bn1 = nn.BatchNorm3d(self.inplanes)
-
-        if actfn == 'relu':
-            self.actfn = nn.ReLU(inplace=True)
-        elif actfn == 'swish':
-            self.actfn = Swish()
-        elif actfn == 'tanh':
-            self.actfn = nn.Tanh()
-        elif actfn == 'leakyrelu':
-            self.actfn = nn.LeakyReLU(inplace=True)
-        elif actfn == 'mish':
-            self.actfn = Mish()
-
-        self.maxpool = nn.MaxPool3d(kernel_size=(3, 3, 3), stride=2, padding=1)
-        self.layer1 = self._make_layer(block, self.inplanes, layers[0], shortcut_type, actfn=self.actfn)
-        self.layer2 = self._make_layer(block, 128, layers[1], shortcut_type, stride=2, actfn=self.actfn)
-        self.layer3 = self._make_layer(block, 256, layers[2], shortcut_type, stride=2, actfn=self.actfn)
-        self.layer4 = self._make_layer(block, 512, layers[3], shortcut_type, stride=2, actfn=self.actfn)
-        
-
-        last_duration = int(math.ceil(sample_duration / 16))
-        last_size = int(math.ceil(sample_size / 16))
-        self.avgpool = nn.AvgPool3d((last_duration, last_size, last_size), stride=1)
-
-        self.fc1 = nn.Linear(512 * block.expansion, 128)
-        self.fc2 = nn.Linear(128, 1)
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv3d):
-                m.weight = nn.init.kaiming_normal_(m.weight, mode='fan_out')
-            elif isinstance(m, nn.BatchNorm3d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-
-    def _make_layer(self, block, planes, blocks, shortcut_type, stride=1, actfn=nn.ReLU(inplace=True)):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            if shortcut_type == 'A':  # at this moment disabled
-                downsample = partial(
-                    downsample_basic_block,
-                    planes=planes * block.expansion,
-                    stride=stride)
-            else:
-                downsample = nn.Sequential(
-                    nn.Conv3d(
-                        self.inplanes,
-                        planes * block.expansion,
-                        kernel_size=1,
-                        stride=stride,
-                        bias=False), 
-                    nn.BatchNorm3d(planes * block.expansion))
-
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, actfn))
-        self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        x0 = self.conv1(x)
-        x0 = self.bn1(x0)
-        x0 = self.actfn(x0)  # shape: (B, 64, 92, 90, 90)
-        
-        x0_mp = self.maxpool(x0)  # shape: (B, 64, 46, 45, 45)
-        
-        x1 = self.layer1(x0_mp)  # shape: (B, 64, 46, 45, 45)
-        x2 = self.layer2(x1)  # shape: (B, 128, 23, 23, 23)
-        x3 = self.layer3(x2)  # shape: (B, 256, 12, 12, 12)
-        x4 = self.layer4(x3)  # shape: (B, 512, 6, 6, 6)
-        
-        x = self.avgpool(x4)
-        x = x.view(x.size(0), -1)
-        # x = self.fc(x)
-        x = self.fc1(x)                    
-        x = self.actfn(x)
-        x = self.fc2(x)
-    
-        return x
-
-
 def get_fine_tuning_parameters(model, ft_begin_index):
     if ft_begin_index == 0:
         return model.parameters()
@@ -599,24 +503,11 @@ def resnet10(**kwargs):
     """
     model = Res3DAutoencoder(BasicBlock, BasicBlock_Decoder, [1, 1, 1, 1], **kwargs)
     return model
-    
-def discriminator10(**kwargs):
-    """Constructs a discriminator-10 model.
-    """
-    model = Discriminator(BasicBlock, [1, 1, 1, 1], **kwargs)
-    return model
-
 
 def resnet18(**kwargs):
     """Constructs a ResNet-18 model.
     """
     model = Res3DAutoencoder(BasicBlock, BasicBlock_Decoder, [2, 2, 2, 2], **kwargs)
-    return model
-    
-def discriminator18(**kwargs):
-    """Constructs a discriminator-18 model.
-    """
-    model = Discriminator(BasicBlock, [1, 1, 1, 1], **kwargs)
     return model
 
 def resnet34(**kwargs):

@@ -296,11 +296,18 @@ def GetCTSlices(input_info,PTsliceNo,crop_slice):
 
     CTimgs = [dicom.read_file(sample_path).pixel_array for sample_path in sample_paths]
     CTimgs = np.asarray(CTimgs)
-
+	
+    # change to HU value
+    CT_header = dicom.read_file(sample_paths[0])
+    RescaleIntercept = CT_header.RescaleIntercept
+    RescaleSlope = CT_header.RescaleSlope
+    #print ('slope, intercept',  RescaleSlope, RescaleIntercept)
+    #print ('CT max, CTmin', CTimgs.max(), CTimgs.min())
+    # now get real HU for opc-Radiomics
+    CTimgs = CTimgs* RescaleSlope + RescaleIntercept
+	
     return CTimgs,CropSliceNo
-
-
-
+	
 def GenerateMask(input_info,obj2dis,PTsliceNo,CropSliceNo):
 	# generate binary masks from the PT region coordinates
 	

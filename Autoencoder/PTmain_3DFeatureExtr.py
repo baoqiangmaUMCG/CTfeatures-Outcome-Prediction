@@ -82,38 +82,29 @@ def main():
         else:       
            opt.input_channel += 1
 
-    model_G, parameters_G, model_D, parameters_D, = generate_model(opt)
-    txt_G = summary(model=model_G, input_size=(opt.input_channel, opt.sample_duration, opt.sample_size, opt.sample_size))
-    txt_D = summary(model=model_D, input_size=(opt.input_channel, opt.sample_duration, opt.sample_size, opt.sample_size))
-    print(txt_G)  
-    print(txt_D)    
+    model, parameters = generate_model(opt)
+    txt = summary(model=model, input_size=(opt.input_channel, opt.sample_duration, opt.sample_size, opt.sample_size))
+	
+    print(txt)    
     # pdb.set_trace()
 
     # save model architecture
-    file = open(opt.result_path + '/model_G.txt', 'a+')
+    file = open(opt.result_path + '/model.txt', 'a+')
     file.write(str(txt_G))
     file.close()
     
-    file = open(opt.result_path + '/model_D.txt', 'a+')
-    file.write(str(txt_D))
-    file.close()
-    
     # save the config values 
-    file = open(opt.result_path + '/parameter_G.txt', 'a+')
+    file = open(opt.result_path + '/parameter.txt', 'a+')
     file.write(str(opt))
     file.close()
 
     # criterion = nn.MSELoss()
     # criterion = nn.L1Loss()
-    criterion_G = CombinedLoss(opt)
+    criterion = CombinedLoss(opt)
     #criterion_D = nn.BCEWithLogitsLoss()
-    criterion_D = nn.MSELoss()
-        
-    
 
     if not opt.no_cuda:
-        criterion_G = criterion_G.cuda()
-        criterion_D = criterion_D.cuda()
+        criterion = criterion.cuda()
 
     # pdb.set_trace()
     train_logger = WriteLogger(
@@ -134,52 +125,39 @@ def main():
 
     # opt.optimizer='adam'
     if opt.optimizer.lower() == 'sgd':
-        optimizer_G = optim.SGD(
-            parameters_G,
+        optimizer = optim.SGD(
+            parameters,
             lr=opt.learning_rate,
             momentum=opt.momentum,
             dampening=dampening,
             weight_decay=opt.weight_decay,
             nesterov=opt.nesterov)
-        optimizer_D = optim.SGD(
-            parameters_D,
-            lr=0.0002,
-            momentum=opt.momentum,
-            dampening=dampening,
-            weight_decay=opt.weight_decay,
-            nesterov=opt.nesterov)
+
     elif opt.optimizer.lower() == 'adam':
-        optimizer_G = optim.Adam(
-            parameters_G,
+        optimizer = optim.Adam(
+            parameters,
             lr=opt.learning_rate,
             weight_decay=opt.weight_decay)
-        optimizer_D = optim.Adam(
-            parameters_D,
-            lr=0.0002,
-            weight_decay=opt.weight_decay
-        )
 
     # a nice example on the lr_scheduler:https://www.deeplearningwizard.com/deep_learning/boosting_models_pytorch/lr_scheduling/
     if opt.lr_scheduler == 'reducelr':
-      scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_G, 'min', factor=opt.reducelr_factor, patience=opt.lr_patience)
+      scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=opt.reducelr_factor, patience=opt.lr_patience)
     elif opt.lr_scheduler == 'cycliclr':
       if opt.optimizer.lower() == 'adam':
           cycle_momentum = False
       else:
           cycle_momentum = True
-      scheduler = lr_scheduler.CyclicLR(optimizer_G, base_lr=0.001, max_lr=0.1, step_size_up=20, step_size_down=1000, cycle_momentum=cycle_momentum)
+      scheduler = lr_scheduler.CyclicLR(optimizer, base_lr=0.001, max_lr=0.1, step_size_up=20, step_size_down=1000, cycle_momentum=cycle_momentum)
 
     if opt.resume_path:
         print('loading checkpoint {}'.format(opt.resume_path))
         checkpoint = torch.load(opt.resume_path)
         assert opt.arch == checkpoint['arch']
         opt.begin_epoch = checkpoint['epoch']
-        model_G.load_state_dict(checkpoint['state_dict_G'])
-        model_D.load_state_dict(checkpoint['state_dict_D'])
-
+        model.load_state_dict(checkpoint['state_dict'])
+	    
         if not opt.no_train:
-            optimizer_G.load_state_dict(checkpoint['optimizer_G'])
-            optimizer_D.load_state_dict(checkpoint['optimizer_D'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
 
     print('Run the code')
 
@@ -190,32 +168,27 @@ def main():
     train_list = random.sample(list(trainval_list),int(len(trainval_list)*0.8))
     val_list = list(set(trainval_list) - set(train_list))
     
-       
-    
     #train_dataloader = get_dataloader(opt, list(train_list), batch_size=opt.batch_size, shuffle=True, DataAug=True)
     train_dataloader = get_dataloader(opt, list(trainval_list), batch_size=opt.batch_size, shuffle=True, DataAug=True)
    
     # NEW
-    
     val_dataloader = get_dataloader(opt, list(val_list), batch_size=opt.batch_size, shuffle=False, DataAug=False)
     test_loader = get_dataloader(opt, list(test_list), batch_size=opt.batch_size, shuffle=False, DataAug=False)
-    
-    
 
     for i in range(opt.begin_epoch, opt.n_epochs + 1):
         if not opt.no_train:
             # pdb.set_trace()
             # train_loss, train_l1, train_ssim, train_ssim_piqa, train_mse, train_kld = 
-            train_epoch(i, train_dataloader, model_G,model_D ,criterion_G,criterion_D, optimizer_G,optimizer_D, scheduler, opt, train_logger, train_batch_logger, writer)
+            train_epoch(i, train_dataloader, model, criterion , optimizer, scheduler, opt, train_logger, train_batch_logger, writer)
 
         if not opt.no_val:
             # val_loss, val_l1, val_ssim, val_ssim_piqa, val_mse, val_kld = 
-            scheduler = val_epoch(i, val_dataloader, model_G,model_D ,criterion_G,criterion_D, scheduler, opt, val_logger, writer)
+            scheduler = val_epoch(i, val_dataloader, model ,criterion, scheduler, opt, val_logger, writer)
     
     # just for get image, don't perform other test        
-    latent_feature_test = test(1, test_loader, model_G,model_D ,criterion_G,criterion_D, opt, test_logger, writer)            
+    latent_feature_test = test(1, test_loader, model,criterion, opt, test_logger, writer)            
     '''
-    latent_feature_test = test(1, test_loader, model_G,model_D ,criterion_G,criterion_D, opt, test_logger, writer)    
+    latent_feature_test = test(1, test_loader, model, criterion, opt, test_logger, writer)    
     latent_feature_test = np.squeeze(np.array(latent_feature_test.cpu()))
     latent_feature_test_csv = pd.DataFrame(latent_feature_test)
     latent_feature_test_csv['index'] = test_list
@@ -224,7 +197,7 @@ def main():
      
     all_dataloader = get_dataloader(opt, list(all_list), batch_size=opt.batch_size, shuffle=False, DataAug=False)
     
-    latent_feature = test(2, all_dataloader, model_G,model_D ,criterion_G,criterion_D, opt, test_logger, writer)
+    latent_feature = test(2, all_dataloader, model, criterion, opt, test_logger, writer)
     latent_feature = np.squeeze(np.array(latent_feature.cpu()))
     l_max , l_min = latent_feature.max(axis=0),latent_feature.min(axis=0)
     latent_feature = (latent_feature - l_min)/(l_max - l_min)
@@ -242,5 +215,5 @@ def Train_test_split(pt_list,ValidDataInd):
 	all_list = np.asarray(pt_list)[np.where(ValidDataInd>0)[0]]
 	trainval_list = np.asarray(pt_list)[list(set(np.where(ValidDataInd<200)[0])- set(np.where(ValidDataInd==0)[0])) ]
 	test_list = np.asarray(pt_list)[np.where(ValidDataInd>199)[0]]
-
+	
 	return trainval_list, test_list, all_list
